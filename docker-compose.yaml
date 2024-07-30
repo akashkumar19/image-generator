@@ -1,0 +1,51 @@
+version: '1'
+
+services:
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+
+
+  celery:
+    build: .
+    command: celery -A image_generator worker -l info
+    volumes:
+      - .:/image_generator
+    env_file:
+      - .env
+      
+    depends_on:
+      - redis
+
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_DB: TEST
+      POSTGRES_USER: TEST
+      POSTGRES_PASSWORD: TEST
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    
+
+  web:
+    build: .
+    command: bash -c "python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    container_name: image_generator
+    volumes:
+      - .:/image_generator
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - celery
+   
+  
+    
+volumes:
+  postgres_data:
+
